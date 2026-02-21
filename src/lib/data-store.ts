@@ -501,7 +501,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   canCurrentUserApprove: (_amount) => {
     // With RBAC, approval is permission-based not limit-based
     const authState = useAuthStore.getState();
-    return authState.can('project.approve_request');
+    return authState.can('request.approve');
   },
 
   getRequestsByStatus: (status) => get().requests.filter((r) => r.status === status),

@@ -286,7 +286,7 @@ function QueueRow({
   const project = store.getProjectById(request.projectId);
   const costCode = store.getCostCodeById(request.costCodeId);
   const vendorCount = store.getVendorPOCount(request.vendor);
-  const canApprove = can('project.approve_request', request.projectId);
+  const canApprove = can('request.approve', request.projectId);
   const impact = showBudgetImpact
     ? store.getBudgetImpact(request.projectId, request.estimatedTotal)
     : null;

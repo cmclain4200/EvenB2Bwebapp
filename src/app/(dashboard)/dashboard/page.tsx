@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useDataStore } from '@/lib/data-store';
+import type { PurchaseRequest, Project } from '@/lib/data-store';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 
 export default function DashboardPage() {
@@ -210,7 +211,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Budget Overview */}
-      <div className="bg-white rounded-xl border border-border p-6">
+      <div className="bg-white rounded-xl border border-border p-6 mb-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-[16px] font-semibold text-text">Budget Overview</h3>
           <Link href="/projects" className="text-[13px] font-medium text-primary hover:text-primary-hover transition-colors">
@@ -256,6 +257,296 @@ export default function DashboardPage() {
           })}
         </div>
       </div>
+
+      {/* Financial Health Overview */}
+      <FinancialHealthSection projects={projects} requests={requests} getBudgetSnapshot={getBudgetSnapshot} />
+    </div>
+  );
+}
+
+// ── Financial Health Section ────────────────────────────────
+
+interface BudgetSnapshot {
+  monthlyBudget: number;
+  approvedTotal: number;
+  purchasedTotal: number;
+  pendingTotal: number;
+}
+
+function FinancialHealthSection({
+  projects,
+  requests,
+  getBudgetSnapshot,
+}: {
+  projects: Project[];
+  requests: PurchaseRequest[];
+  getBudgetSnapshot: (projectId: string) => BudgetSnapshot;
+}) {
+  const projectData = useMemo(
+    () =>
+      projects.map((p) => {
+        const snap = getBudgetSnapshot(p.id);
+        return {
+          name: p.name,
+          budget: snap.monthlyBudget,
+          committed: snap.approvedTotal + snap.purchasedTotal,
+          actual: snap.purchasedTotal,
+        };
+      }),
+    [projects, getBudgetSnapshot]
+  );
+
+  const spendData = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 60);
+
+    const approvedByDate: Record<string, number> = {};
+    const purchasedByDate: Record<string, number> = {};
+
+    for (const r of requests) {
+      if (r.approvedAt) {
+        const d = new Date(r.approvedAt);
+        if (d >= cutoff) {
+          const key = d.toISOString().slice(0, 10);
+          approvedByDate[key] = (approvedByDate[key] ?? 0) + r.estimatedTotal;
+        }
+      }
+      if (r.purchasedAt) {
+        const d = new Date(r.purchasedAt);
+        if (d >= cutoff) {
+          const key = d.toISOString().slice(0, 10);
+          purchasedByDate[key] = (purchasedByDate[key] ?? 0) + (r.finalTotal ?? r.estimatedTotal);
+        }
+      }
+    }
+
+    // Build 60-day date range
+    const dates: string[] = [];
+    for (let i = 59; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+
+    let cumApproved = 0;
+    let cumPurchased = 0;
+    return dates.map((date) => {
+      cumApproved += approvedByDate[date] ?? 0;
+      cumPurchased += purchasedByDate[date] ?? 0;
+      return { date, approved: cumApproved, purchased: cumPurchased };
+    });
+  }, [requests]);
+
+  return (
+    <div>
+      <h2 className="text-[16px] font-semibold text-text mb-1">Financial Health Overview</h2>
+      <p className="text-[12px] text-text-muted mb-5">
+        Budget utilization and spend trends across all active projects
+      </p>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* Budget vs Committed vs Actual */}
+        <div className="bg-white rounded-xl border border-border p-6">
+          <h3 className="text-[13px] font-semibold text-text mb-5">Budget vs Committed vs Actual</h3>
+          <div className="space-y-4">
+            {projectData.map((p) => (
+              <BudgetBar key={p.name} {...p} />
+            ))}
+          </div>
+          <div className="flex items-center gap-5 mt-5 pt-4 border-t border-border-light">
+            <LegendDot color="bg-primary" label="Actual Spent" />
+            <LegendDot color="bg-success/40" label="Committed" />
+            <LegendDot color="bg-surface" label="Remaining" />
+          </div>
+        </div>
+
+        {/* Spend Over Time */}
+        <div className="bg-white rounded-xl border border-border p-6">
+          <h3 className="text-[13px] font-semibold text-text mb-5">Spend Trend – Last 60 Days</h3>
+          <SpendChart data={spendData} />
+          <div className="flex items-center gap-5 mt-4 pt-4 border-t border-border-light">
+            <LegendDot color="bg-primary" label="Approved (cumulative)" />
+            <LegendDot color="bg-success" label="Purchased (cumulative)" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Budget Bar ──────────────────────────────────────────────
+
+function BudgetBar({
+  name,
+  budget,
+  committed,
+  actual,
+}: {
+  name: string;
+  budget: number;
+  committed: number;
+  actual: number;
+}) {
+  const pctActual = budget > 0 ? (actual / budget) * 100 : 0;
+  const pctCommitted = budget > 0 ? (committed / budget) * 100 : 0;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[12px] font-medium text-text">{name}</span>
+        <span className="text-[11px] text-text-muted tabular-nums">{formatCurrency(budget)}</span>
+      </div>
+      <div className="w-full bg-surface rounded-full h-3 relative overflow-hidden">
+        {/* Committed (behind actual) */}
+        <div
+          className="absolute top-0 left-0 h-3 rounded-full bg-success/40 transition-all"
+          style={{ width: `${Math.min(pctCommitted, 100)}%` }}
+        />
+        {/* Actual (on top) */}
+        <div
+          className="absolute top-0 left-0 h-3 rounded-full bg-primary transition-all"
+          style={{ width: `${Math.min(pctActual, 100)}%` }}
+        />
+      </div>
+      <div className="flex items-center gap-3 mt-1">
+        <span className="text-[10px] text-text-muted tabular-nums">
+          Actual: {formatCurrency(actual)}
+        </span>
+        <span className="text-[10px] text-text-muted tabular-nums">
+          Committed: {formatCurrency(committed)}
+        </span>
+        <span className="text-[10px] text-text-muted tabular-nums">
+          Remaining: {formatCurrency(Math.max(budget - committed, 0))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Spend Chart (canvas-based) ──────────────────────────────
+
+function SpendChart({ data }: { data: { date: string; approved: number; purchased: number }[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || data.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const W = rect.width;
+    const H = rect.height;
+    const padTop = 8;
+    const padBottom = 24;
+    const padLeft = 48;
+    const padRight = 12;
+    const chartW = W - padLeft - padRight;
+    const chartH = H - padTop - padBottom;
+
+    ctx.clearRect(0, 0, W, H);
+
+    const maxVal = Math.max(
+      ...data.map((d) => Math.max(d.approved, d.purchased)),
+      1
+    );
+    const niceMax = Math.ceil(maxVal / 1000) * 1000;
+
+    // Y-axis grid lines
+    const ySteps = 4;
+    ctx.strokeStyle = '#F0F1F3';
+    ctx.lineWidth = 1;
+    ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillStyle = '#9CA3AF';
+    ctx.textAlign = 'right';
+
+    for (let i = 0; i <= ySteps; i++) {
+      const val = (niceMax / ySteps) * i;
+      const y = padTop + chartH - (val / niceMax) * chartH;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, y);
+      ctx.lineTo(W - padRight, y);
+      ctx.stroke();
+      ctx.fillText(`$${(val / 1000).toFixed(0)}k`, padLeft - 6, y + 3);
+    }
+
+    // X-axis labels (show ~5 dates)
+    ctx.textAlign = 'center';
+    const labelInterval = Math.floor(data.length / 5);
+    for (let i = 0; i < data.length; i += labelInterval) {
+      const x = padLeft + (i / (data.length - 1)) * chartW;
+      const d = new Date(data[i].date);
+      const label = `${d.getMonth() + 1}/${d.getDate()}`;
+      ctx.fillText(label, x, H - 4);
+    }
+
+    // Helper to draw a line + fill
+    function drawLine(
+      values: number[],
+      color: string,
+      fillAlpha: number
+    ) {
+      if (!ctx) return;
+      ctx.beginPath();
+      for (let i = 0; i < values.length; i++) {
+        const x = padLeft + (i / (values.length - 1)) * chartW;
+        const y = padTop + chartH - (values[i] / niceMax) * chartH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Fill
+      const lastX = padLeft + chartW;
+      const baseline = padTop + chartH;
+      ctx.lineTo(lastX, baseline);
+      ctx.lineTo(padLeft, baseline);
+      ctx.closePath();
+      ctx.fillStyle = color.replace(')', `, ${fillAlpha})`).replace('rgb', 'rgba');
+      ctx.fill();
+    }
+
+    // Draw approved line (primary blue)
+    drawLine(
+      data.map((d) => d.approved),
+      'rgb(31, 58, 95)',
+      0.08
+    );
+
+    // Draw purchased line (success green)
+    drawLine(
+      data.map((d) => d.purchased),
+      'rgb(30, 127, 79)',
+      0.08
+    );
+  }, [data]);
+
+  if (data.length === 0 || (data[data.length - 1].approved === 0 && data[data.length - 1].purchased === 0)) {
+    return (
+      <div className="h-[200px] flex items-center justify-center text-[13px] text-text-muted">
+        No spend data in the last 60 days
+      </div>
+    );
+  }
+
+  return <canvas ref={canvasRef} className="w-full h-[200px]" />;
+}
+
+// ── Legend Dot ───────────────────────────────────────────────
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-2.5 h-2.5 rounded-full ${color}`} />
+      <span className="text-[10px] text-text-muted">{label}</span>
     </div>
   );
 }
