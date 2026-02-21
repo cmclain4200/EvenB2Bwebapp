@@ -13,6 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/activity': 'Audit Trail',
   '/access-codes': 'Access Codes',
   '/users': 'Users',
+  '/support': 'Support',
 };
 
 export default function DashboardLayout({

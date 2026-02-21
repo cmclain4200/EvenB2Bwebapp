@@ -133,13 +133,13 @@ export function Sidebar() {
           <SignOutIcon className="w-4 h-4 flex-shrink-0" />
           <span>Sign Out</span>
         </button>
-        <a
-          href="mailto:support@evenb2b.com"
+        <Link
+          href="/support"
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-text-muted hover:bg-surface hover:text-text transition-colors w-full text-left"
         >
           <SupportIcon className="w-4 h-4 flex-shrink-0" />
           <span>Support</span>
-        </a>
+        </Link>
       </div>
     </aside>
   );
