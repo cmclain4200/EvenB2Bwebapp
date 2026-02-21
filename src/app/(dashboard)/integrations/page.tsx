@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/lib/auth-store';
 import { useDataStore } from '@/lib/data-store';
 import { createClient } from '@/lib/supabase-browser';
-import Link from 'next/link';
+
 
 // ── Types ────────────────────────────────────────
 
@@ -13,10 +13,9 @@ interface IntegrationConnection {
   organization_id: string;
   provider: 'qbo' | 'procore';
   status: 'connected' | 'disconnected' | 'error';
-  external_company_name: string | null;
-  last_sync_at: string | null;
-  error_message: string | null;
-  created_at: string;
+  company_name: string | null;
+  last_error: string | null;
+  connected_at: string | null;
   updated_at: string;
 }
 
@@ -215,7 +214,6 @@ export default function IntegrationsPage() {
             onConnect={() => handleConnect('qbo')}
             onDisconnect={() => handleDisconnect('qbo')}
             onTest={() => handleTestConnection('qbo')}
-            mappingsHref="/integrations/mappings?provider=qbo"
           />
 
           {/* Procore */}
@@ -230,7 +228,6 @@ export default function IntegrationsPage() {
             onConnect={() => handleConnect('procore')}
             onDisconnect={() => handleDisconnect('procore')}
             onTest={() => handleTestConnection('procore')}
-            mappingsHref="/integrations/mappings?provider=procore"
           />
 
           {/* Excel Export */}
@@ -269,7 +266,6 @@ function IntegrationCard({
   onConnect,
   onDisconnect,
   onTest,
-  mappingsHref,
 }: {
   title: string;
   description: string;
@@ -281,7 +277,6 @@ function IntegrationCard({
   onConnect: () => void;
   onDisconnect: () => void;
   onTest: () => void;
-  mappingsHref: string;
 }) {
   return (
     <div className="bg-white border border-border rounded-xl p-5">
@@ -316,7 +311,7 @@ function IntegrationCard({
                 Company
               </span>
               <span className="text-[12px] text-text font-medium">
-                {connection.external_company_name || 'Unknown'}
+                {connection.company_name || 'Unknown'}
               </span>
             </div>
             <div>
@@ -324,7 +319,7 @@ function IntegrationCard({
                 Last Sync
               </span>
               <span className="text-[12px] text-text">
-                {formatSyncTime(connection.last_sync_at)}
+                {formatSyncTime(connection.updated_at)}
               </span>
             </div>
           </div>
@@ -346,12 +341,13 @@ function IntegrationCard({
               )}
             </button>
 
-            <Link
-              href={mappingsHref}
-              className="px-3 py-1.5 text-[11px] font-medium text-primary border border-primary/20 rounded-lg hover:bg-primary/5 transition-colors"
+            <button
+              disabled
+              title="Mappings configuration coming soon"
+              className="px-3 py-1.5 text-[11px] font-medium text-text-muted border border-border rounded-lg opacity-50 cursor-not-allowed"
             >
               Manage Mappings
-            </Link>
+            </button>
 
             <button
               onClick={onDisconnect}
@@ -369,7 +365,7 @@ function IntegrationCard({
         <div className="mt-4 pt-4 border-t border-border">
           <div className="bg-danger-soft rounded-lg px-3 py-2 mb-4">
             <p className="text-[11px] text-danger font-medium">
-              {connection.error_message || 'Connection error. Please reconnect.'}
+              {connection.last_error || 'Connection error. Please reconnect.'}
             </p>
           </div>
 

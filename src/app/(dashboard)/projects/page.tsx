@@ -221,7 +221,7 @@ function AllProjectsOverview() {
   return (
     <div className="bg-bg border border-border rounded">
       <div className="px-6 py-3 border-b border-border">
-        <h2 className="text-[12px] font-semibold text-muted uppercase tracking-wider">All Projects</h2>
+        <h2 className="text-[12px] font-semibold text-text-muted uppercase tracking-wider">All Projects</h2>
       </div>
       <table className="w-full text-[12px]">
         <thead>
