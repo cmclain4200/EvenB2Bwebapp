@@ -26,7 +26,7 @@ const ADMIN_ITEMS: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { can, profile, organization, signOut } = useAuthStore();
+  const { can, profile, organization, signOut, leaveOrganization } = useAuthStore();
 
   const visibleNav = NAV_ITEMS.filter((item) => !item.permission || can(item.permission));
   const visibleAdmin = ADMIN_ITEMS.filter((item) => !item.permission || can(item.permission));
@@ -34,6 +34,16 @@ export function Sidebar() {
   const handleSignOut = async () => {
     await signOut();
     router.replace('/login');
+  };
+
+  const handleLeaveOrg = async () => {
+    if (!confirm(`Leave ${organization?.name ?? 'this organization'}? You will need a new access code to rejoin.`)) return;
+    const result = await leaveOrganization();
+    if (result.error) {
+      alert(result.error);
+    } else {
+      router.replace('/onboarding');
+    }
   };
 
   return (
@@ -107,6 +117,15 @@ export function Sidebar() {
           <p className="text-[12px] font-medium text-text truncate">{profile?.full_name || profile?.email}</p>
           <p className="text-[10px] text-text-muted truncate">{profile?.email}</p>
         </div>
+        {organization && (
+          <button
+            onClick={handleLeaveOrg}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-warning hover:bg-warning-soft transition-colors w-full text-left"
+          >
+            <LeaveIcon className="w-4 h-4 flex-shrink-0" />
+            <span>Leave Organization</span>
+          </button>
+        )}
         <button
           onClick={handleSignOut}
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-text-muted hover:bg-surface hover:text-text transition-colors w-full text-left"
@@ -114,6 +133,13 @@ export function Sidebar() {
           <SignOutIcon className="w-4 h-4 flex-shrink-0" />
           <span>Sign Out</span>
         </button>
+        <a
+          href="mailto:support@evenb2b.com"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-text-muted hover:bg-surface hover:text-text transition-colors w-full text-left"
+        >
+          <SupportIcon className="w-4 h-4 flex-shrink-0" />
+          <span>Support</span>
+        </a>
       </div>
     </aside>
   );
@@ -164,6 +190,22 @@ function KeyIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+    </svg>
+  );
+}
+
+function SupportIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+    </svg>
+  );
+}
+
+function LeaveIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15M9 12l3 3m0 0l3-3m-3 3V2.25" />
     </svg>
   );
 }
