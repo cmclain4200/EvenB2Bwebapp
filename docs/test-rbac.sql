@@ -95,7 +95,49 @@ FROM pg_trigger
 WHERE tgname = 'trg_log_request_status_change';
 -- Expected: 1 row, on purchase_requests
 
--- 13. Count data per org (sanity check)
+-- 13. Verify integration tables exist
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name IN (
+    'integration_connections', 'integration_mappings',
+    'integration_sync_logs', 'project_financial_settings',
+    'vendors', 'org_display_titles'
+  )
+ORDER BY table_name;
+-- Expected: 6 rows
+
+-- 14. Verify project_financial_settings columns
+SELECT column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_name = 'project_financial_settings'
+ORDER BY ordinal_position;
+-- Expected: includes require_receipt_attachment, require_description, amount_threshold
+
+-- 15. Verify Edge Functions via listing
+-- (Run in Supabase Dashboard > Edge Functions, or use:)
+-- supabase functions list
+-- Expected: manage-request, get-my-permissions, claim-access-code,
+--   manage-access-codes, leave-organization, integration-oauth,
+--   integration-api, integration-export
+
+-- 16. Verify org permission grants include finance/integration keys
+SELECT r.name AS role, p.key AS permission
+FROM org_role_permissions rp
+JOIN org_roles r ON r.id = rp.org_role_id
+JOIN org_permissions p ON p.id = rp.org_permission_id
+WHERE p.key LIKE 'finance.%' OR p.key LIKE 'org.manage_integrations'
+ORDER BY r.name, p.key;
+
+-- 17. Verify project permission grants include finance/legacy keys
+SELECT r.name AS role, p.key AS permission
+FROM project_role_permissions rp
+JOIN project_roles r ON r.id = rp.project_role_id
+JOIN project_permissions p ON p.id = rp.project_permission_id
+WHERE p.key LIKE 'finance.%' OR p.key LIKE 'request.%' OR p.key LIKE 'po.%'
+ORDER BY r.name, p.key;
+
+-- 18. Count data per org (sanity check)
 SELECT
   o.name AS org,
   (SELECT count(*) FROM projects WHERE organization_id = o.id) AS projects,

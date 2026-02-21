@@ -156,14 +156,15 @@ export default function IntegrationsPage() {
     if (!session) return;
     setExportingType(exportType);
     try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/integration-export`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/integration-export?type=${encodeURIComponent(exportType)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
         },
-        body: JSON.stringify({ type: exportType }),
-      });
+      );
 
       if (!res.ok) throw new Error('Export failed');
 
@@ -171,12 +172,12 @@ export default function IntegrationsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${exportType}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `${exportType}-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast(`${exportType.replace(/-/g, ' ')} exported`);
+      showToast(`${exportType.replace(/_/g, ' ')} exported`);
     } catch (err) {
       showToast('Export failed. Please try again.', 'error');
     } finally {
@@ -436,24 +437,19 @@ function StatusBadge({ status }: { status: ConnectionStatus }) {
 
 const EXPORT_OPTIONS = [
   {
-    key: 'project-summary',
-    label: 'Project Summary',
-    description: 'Budget vs. actual for all active projects',
+    key: 'requests',
+    label: 'All Requests',
+    description: 'Full export of all purchase requests with details',
   },
   {
-    key: 'reimbursements',
-    label: 'Reimbursements',
-    description: 'All pending and completed reimbursement records',
+    key: 'cost_code_summary',
+    label: 'Cost Code Summary',
+    description: 'Spending by cost code across all projects',
   },
   {
-    key: 'approval-log',
+    key: 'approval_log',
     label: 'Approval Log',
     description: 'Full audit trail of purchase request approvals',
-  },
-  {
-    key: 'cost-code-breakdown',
-    label: 'Cost Code Breakdown',
-    description: 'Spending by cost code across all projects',
   },
 ];
 
