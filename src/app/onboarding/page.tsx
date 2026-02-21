@@ -4,11 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 
-export default function LoginPage() {
+export default function OnboardingPage() {
   const router = useRouter();
-  const { session, loading, onboarded, initialize, signIn } = useAuthStore();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { session, loading, onboarded, initialize, claimAccessCode, signOut } = useAuthStore();
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -17,25 +16,30 @@ export default function LoginPage() {
   }, [initialize]);
 
   useEffect(() => {
-    if (!loading && session) {
-      router.replace(onboarded ? '/queue' : '/onboarding');
+    if (!loading && !session) {
+      router.replace('/login');
+    }
+    if (!loading && session && onboarded) {
+      router.replace('/queue');
     }
   }, [loading, session, onboarded, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!code.trim()) return;
+
     setError('');
     setSubmitting(true);
 
-    const result = await signIn(email, password);
+    const result = await claimAccessCode(code.trim());
     if (result.error) {
       setError(result.error);
       setSubmitting(false);
     }
-    // Auth state change listener in initialize() handles redirect
+    // onboarded state change triggers redirect via useEffect
   };
 
-  if (loading) {
+  if (loading || (!session && !loading)) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -51,33 +55,24 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mx-auto mb-4">
             <span className="text-white font-semibold text-lg">E</span>
           </div>
-          <h1 className="text-xl font-semibold text-text tracking-tight">Even B2B</h1>
-          <p className="text-[12px] text-text-muted mt-1">Purchase Approvals for Construction</p>
+          <h1 className="text-xl font-semibold text-text tracking-tight">Join Your Team</h1>
+          <p className="text-[12px] text-text-muted mt-1">
+            Enter the access code your admin gave you
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[12px] font-medium text-text mb-1">Email</label>
+            <label className="block text-[12px] font-medium text-text mb-1">Access Code</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
               required
-              className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary"
-              placeholder="you@company.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[12px] font-medium text-text mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3 py-2.5 border border-border rounded-lg text-[13px] text-text bg-white focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary"
-              placeholder="Min. 6 characters"
+              className="w-full px-3 py-2.5 border border-border rounded-lg text-[15px] text-text bg-white text-center font-mono tracking-[0.2em] uppercase focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary"
+              placeholder="XXXX-XXXX"
+              maxLength={12}
+              autoFocus
             />
           </div>
 
@@ -89,22 +84,24 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !code.trim()}
             className="w-full py-2.5 bg-primary text-white text-[13px] font-semibold rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Signing in...' : 'Sign In'}
+            {submitting ? 'Joining...' : 'Join Organization'}
           </button>
         </form>
 
-        <p className="text-[12px] text-text-muted text-center mt-4">
-          Don&apos;t have an account?{' '}
+        <div className="mt-6 pt-4 border-t border-border">
+          <p className="text-[11px] text-text-muted text-center">
+            Don&apos;t have a code? Ask your project admin or manager.
+          </p>
           <button
-            onClick={() => router.push('/signup')}
-            className="text-primary font-medium hover:underline"
+            onClick={signOut}
+            className="block mx-auto mt-2 text-[12px] text-text-muted hover:text-text transition-colors"
           >
-            Sign up
+            Sign out
           </button>
-        </p>
+        </div>
       </div>
     </div>
   );
