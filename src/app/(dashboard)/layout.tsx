@@ -11,9 +11,14 @@ const PAGE_TITLES: Record<string, string> = {
   '/queue': 'Approvals',
   '/projects': 'Budget',
   '/activity': 'Audit Trail',
+  '/integrations': 'Integrations',
+  '/cost-codes': 'Cost Codes',
+  '/vendors': 'Vendors',
+  '/roles': 'Roles',
   '/access-codes': 'Access Codes',
   '/users': 'Users',
   '/support': 'Support',
+  '/needs-attention': 'Needs Attention',
 };
 
 export default function DashboardLayout({

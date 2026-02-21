@@ -26,7 +26,7 @@ export function RequestDetailDrawer({ request, onClose, onApprove, onReject }: R
 
   // Budget impact
   const impact = store.getBudgetImpact(request.projectId, request.estimatedTotal);
-  const canApprove = can('request.approve', request.projectId);
+  const canApprove = can('proposal.approve', request.projectId) || can('request.approve', request.projectId);
   const vendorCount = store.getVendorPOCount(request.vendor);
 
   const handleApprove = () => {

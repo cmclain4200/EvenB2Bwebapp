@@ -28,6 +28,29 @@ export interface CostCode {
   code: string;
   label: string;
   category: string;
+  isActive: boolean;
+  externalSource: 'manual' | 'quickbooks' | 'procore' | 'import';
+  externalId?: string;
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  isActive: boolean;
+  externalSource: 'manual' | 'quickbooks' | 'procore' | 'import';
+  externalId?: string;
+}
+
+export interface ProjectFinancialSettings {
+  projectId: string;
+  requireCostCode: boolean;
+  requireVendor: boolean;
+  requirePoNumber: boolean;
+  requireReceiptAttachment: boolean;
+  requireDescription: boolean;
+  amountThreshold: number;
+  poLabel: string;
+  costCodeSourceMode: 'org_default' | 'project_override';
 }
 
 export interface LineItem {
@@ -44,6 +67,7 @@ export interface PurchaseRequest {
   projectId: string;
   requesterId: string;
   vendor: string;
+  vendorId?: string;
   category: RequestCategory;
   costCodeId: string;
   lineItems: LineItem[];
@@ -56,6 +80,8 @@ export interface PurchaseRequest {
   receiptAttachments: string[];
   deliveryMethod: DeliveryMethod;
   deliveryAddress?: string;
+  poReference?: string;
+  accountingNotes?: string;
   status: RequestStatus;
   createdAt: string;
   updatedAt: string;
@@ -127,6 +153,9 @@ function dbToRequest(row: Record<string, unknown>, lineItems: Record<string, unk
     receiptAttachments: (row.receipt_attachments as string[]) || [],
     deliveryMethod: row.delivery_method as DeliveryMethod,
     deliveryAddress: (row.delivery_address as string) || undefined,
+    vendorId: (row.vendor_id as string) || undefined,
+    poReference: (row.po_reference as string) || undefined,
+    accountingNotes: (row.accounting_notes as string) || undefined,
     status: row.status as RequestStatus,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -157,6 +186,19 @@ function dbToCostCode(row: Record<string, unknown>): CostCode {
     code: row.code as string,
     label: row.label as string,
     category: row.category as string,
+    isActive: row.is_active !== false,
+    externalSource: (row.external_source as CostCode['externalSource']) || 'manual',
+    externalId: (row.external_id as string) || undefined,
+  };
+}
+
+function dbToVendor(row: Record<string, unknown>): Vendor {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    isActive: row.is_active !== false,
+    externalSource: (row.external_source as Vendor['externalSource']) || 'manual',
+    externalId: (row.external_id as string) || undefined,
   };
 }
 
@@ -196,6 +238,8 @@ interface DataState {
   requests: PurchaseRequest[];
   projects: Project[];
   costCodes: CostCode[];
+  vendors: Vendor[];
+  projectSettings: Record<string, ProjectFinancialSettings>;
   users: UserProfile[];
   auditLog: AuditEntry[];
 
@@ -238,6 +282,12 @@ interface DataState {
   getUserById: (id: string) => UserProfile | undefined;
   getProjectById: (id: string) => Project | undefined;
   getCostCodeById: (id: string) => CostCode | undefined;
+  getVendorById: (id: string) => Vendor | undefined;
+  getActiveCostCodes: () => CostCode[];
+  getActiveVendors: () => Vendor[];
+  getProjectFinancialSettings: (projectId: string) => ProjectFinancialSettings;
+  getNeedsAttention: () => PurchaseRequest[];
+  updateCoding: (requestId: string, data: { costCodeId?: string; vendorId?: string; poReference?: string; accountingNotes?: string }) => Promise<void>;
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -246,6 +296,8 @@ export const useDataStore = create<DataState>((set, get) => ({
   requests: [],
   projects: [],
   costCodes: [],
+  vendors: [],
+  projectSettings: {},
   users: [],
   auditLog: [],
   loading: true,
@@ -274,13 +326,15 @@ export const useDataStore = create<DataState>((set, get) => ({
 
     try {
       // Fetch all data in parallel
-      const [projectsRes, costCodesRes, requestsRes, lineItemsRes, profilesRes, auditRes] = await Promise.all([
+      const [projectsRes, costCodesRes, vendorsRes, requestsRes, lineItemsRes, profilesRes, auditRes, settingsRes] = await Promise.all([
         supabase.from('projects').select('*').eq('organization_id', orgId).order('name'),
         supabase.from('cost_codes').select('*').eq('organization_id', orgId).order('code'),
+        supabase.from('vendors').select('*').eq('organization_id', orgId).order('name'),
         supabase.from('purchase_requests').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }),
         supabase.from('line_items').select('*, purchase_requests!inner(organization_id)').eq('purchase_requests.organization_id', orgId),
         supabase.from('profiles').select('*').eq('organization_id', orgId),
         supabase.from('audit_log').select('*').eq('organization_id', orgId).order('created_at', { ascending: false }).limit(200),
+        supabase.from('project_financial_settings').select('*'),
       ]);
 
       // Build line items map
@@ -302,7 +356,23 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       const projects = (projectsRes.data || []).map(dbToProject);
       const costCodes = (costCodesRes.data || []).map(dbToCostCode);
+      const vendors = (vendorsRes.data || []).map(dbToVendor);
       const auditLog = (auditRes.data || []).map(dbToAuditEntry);
+
+      const projectSettings: Record<string, ProjectFinancialSettings> = {};
+      for (const s of (settingsRes.data || [])) {
+        projectSettings[s.project_id] = {
+          projectId: s.project_id,
+          requireCostCode: s.require_cost_code ?? true,
+          requireVendor: s.require_vendor ?? false,
+          requirePoNumber: s.require_po_number ?? false,
+          requireReceiptAttachment: s.require_receipt_attachment ?? false,
+          requireDescription: s.require_description ?? false,
+          amountThreshold: Number(s.amount_threshold ?? 0),
+          poLabel: s.po_label || 'PO Number',
+          costCodeSourceMode: s.cost_code_source_mode || 'org_default',
+        };
+      }
 
       const users: UserProfile[] = (profilesRes.data || []).map((p) => ({
         id: p.id,
@@ -312,7 +382,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         avatarUrl: p.avatar_url || undefined,
       }));
 
-      set({ requests, projects, costCodes, users, auditLog, loading: false, error: null });
+      set({ requests, projects, costCodes, vendors, projectSettings, users, auditLog, loading: false, error: null });
     } catch (err) {
       set({ error: (err as Error).message, loading: false });
     }
@@ -499,9 +569,8 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   canCurrentUserApprove: (_amount) => {
-    // With RBAC, approval is permission-based not limit-based
     const authState = useAuthStore.getState();
-    return authState.can('request.approve');
+    return authState.can('proposal.approve') || authState.can('request.approve');
   },
 
   getRequestsByStatus: (status) => get().requests.filter((r) => r.status === status),
@@ -518,4 +587,66 @@ export const useDataStore = create<DataState>((set, get) => ({
   getUserById: (id) => get().users.find((u) => u.id === id),
   getProjectById: (id) => get().projects.find((p) => p.id === id),
   getCostCodeById: (id) => get().costCodes.find((c) => c.id === id),
+  getVendorById: (id) => get().vendors.find((v) => v.id === id),
+  getActiveCostCodes: () => get().costCodes.filter((c) => c.isActive),
+  getActiveVendors: () => get().vendors.filter((v) => v.isActive),
+
+  getProjectFinancialSettings: (projectId) => {
+    return get().projectSettings[projectId] ?? {
+      projectId,
+      requireCostCode: false,
+      requireVendor: false,
+      requirePoNumber: false,
+      requireReceiptAttachment: false,
+      requireDescription: false,
+      amountThreshold: 0,
+      poLabel: 'PO Number',
+      costCodeSourceMode: 'org_default' as const,
+    };
+  },
+
+  getNeedsAttention: () => {
+    const { requests, projectSettings } = get();
+    return requests.filter((r) => {
+      if (r.status !== 'approved') return false;
+      const settings = projectSettings[r.projectId];
+      if (!settings) return false;
+      // Only enforce requirements above the amount threshold
+      if (settings.amountThreshold > 0 && r.estimatedTotal < settings.amountThreshold) return false;
+      if (settings.requireCostCode && !r.costCodeId) return true;
+      if (settings.requireVendor && !r.vendorId) return true;
+      if (settings.requirePoNumber && !(r.poReference || '').trim()) return true;
+      if (settings.requireReceiptAttachment && r.receiptAttachments.length === 0) return true;
+      if (settings.requireDescription && !r.notes.trim()) return true;
+      return false;
+    });
+  },
+
+  updateCoding: async (requestId, data) => {
+    const session = useAuthStore.getState().session;
+    if (!session) return;
+
+    const res = await fetch(`${supabaseUrl}/functions/v1/manage-request`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'update_coding',
+        requestId,
+        costCodeId: data.costCodeId,
+        vendorId: data.vendorId,
+        poNumber: data.poReference,
+        accountingNotes: data.accountingNotes,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update coding');
+    }
+
+    await get().refresh();
+  },
 }));
