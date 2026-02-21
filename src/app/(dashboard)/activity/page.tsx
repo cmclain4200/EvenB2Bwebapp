@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useStore } from '@/data/store';
-import { AuditEntry } from '@/data/types';
+import { useDataStore, AuditEntry } from '@/lib/data-store';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 
 type ActionFilter = 'all' | 'submitted' | 'approved' | 'rejected' | 'purchased';
@@ -25,7 +24,7 @@ const ACTION_STYLES: Record<string, { bg: string; text: string; dot: string }> =
 };
 
 export default function ActivityPage() {
-  const store = useStore();
+  const store = useDataStore();
   const [filter, setFilter] = useState<ActionFilter>('all');
   const [search, setSearch] = useState('');
 
@@ -174,7 +173,7 @@ export default function ActivityPage() {
 
 // ── Components ─────────────────────────────────
 function ActivityRow({ entry }: { entry: AuditEntry }) {
-  const store = useStore();
+  const store = useDataStore();
   const user = store.getUserById(entry.userId);
   const style = ACTION_STYLES[entry.action] ?? ACTION_STYLES.created;
 

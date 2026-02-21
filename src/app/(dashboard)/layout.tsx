@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
 import { useAuthStore } from '@/lib/auth-store';
+import { useDataStore } from '@/lib/data-store';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -21,12 +22,21 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, loading, onboarded, profile, initialize } = useAuthStore();
+  const { session, loading, onboarded, profile, organization, initialize } = useAuthStore();
+  const initData = useDataStore((s) => s.initialize);
+  const dataLoading = useDataStore((s) => s.loading);
   const title = PAGE_TITLES[pathname] ?? 'Even B2B';
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Initialize data store once auth + org are ready
+  useEffect(() => {
+    if (session && onboarded && organization) {
+      initData();
+    }
+  }, [session, onboarded, organization, initData]);
 
   useEffect(() => {
     if (!loading) {
@@ -38,7 +48,7 @@ export default function DashboardLayout({
     }
   }, [loading, session, onboarded, router]);
 
-  if (loading || !session || !onboarded) {
+  if (loading || !session || !onboarded || dataLoading) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />

@@ -96,7 +96,16 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-[12px] text-text-muted text-center mt-4">
+        <p className="text-[12px] text-text-muted text-center mt-3">
+          <button
+            onClick={() => router.push('/forgot-password')}
+            className="text-primary font-medium hover:underline"
+          >
+            Forgot password?
+          </button>
+        </p>
+
+        <p className="text-[12px] text-text-muted text-center mt-2">
           Don&apos;t have an account?{' '}
           <button
             onClick={() => router.push('/signup')}

@@ -1,6 +1,6 @@
 'use client';
 
-import { RequestStatus, UrgencyLevel } from '@/data/types';
+import { RequestStatus, UrgencyLevel } from '@/lib/data-store';
 
 const STATUS_STYLES: Record<RequestStatus, string> = {
   draft: 'bg-surface text-text-muted',

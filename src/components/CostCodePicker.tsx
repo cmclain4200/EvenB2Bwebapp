@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useStore } from '@/data/store';
-import { CostCode } from '@/data/types';
+import { useDataStore, CostCode } from '@/lib/data-store';
 
 interface CostCodePickerProps {
   value: string;
@@ -22,7 +21,7 @@ function addRecent(id: string) {
 }
 
 export function CostCodePicker({ value, onChange }: CostCodePickerProps) {
-  const store = useStore();
+  const store = useDataStore();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [, forceUpdate] = useState(0);

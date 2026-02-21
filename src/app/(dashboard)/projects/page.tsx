@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore } from '@/data/store';
-import { Project } from '@/data/types';
+import { useDataStore } from '@/lib/data-store';
 import { StatusChip } from '@/components/StatusChip';
 import { formatCurrency, formatCurrencyCompact, PHASE_LABELS, CATEGORY_LABELS } from '@/lib/utils';
 
 export default function ProjectsPage() {
-  const store = useStore();
+  const store = useDataStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
@@ -104,7 +103,7 @@ export default function ProjectsPage() {
 
 // ── Project Detail ─────────────────────────────
 function ProjectDetail({ projectId }: { projectId: string }) {
-  const store = useStore();
+  const store = useDataStore();
   const project = store.getProjectById(projectId);
   const snap = store.getBudgetSnapshot(projectId);
   const requests = store.requests
@@ -217,7 +216,7 @@ function ProjectDetail({ projectId }: { projectId: string }) {
 
 // ── All Projects Overview Table ────────────────
 function AllProjectsOverview() {
-  const store = useStore();
+  const store = useDataStore();
 
   return (
     <div className="bg-bg border border-border rounded">

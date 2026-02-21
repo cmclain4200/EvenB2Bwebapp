@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore } from '@/data/store';
-import { PurchaseRequest } from '@/data/types';
+import { useDataStore, PurchaseRequest } from '@/lib/data-store';
+import { useAuthStore } from '@/lib/auth-store';
 import { StatusChip, UrgencyChip } from './StatusChip';
 import { RejectModal } from './RejectModal';
 import { CostCodePicker } from './CostCodePicker';
@@ -16,7 +16,8 @@ interface RequestDetailDrawerProps {
 }
 
 export function RequestDetailDrawer({ request, onClose, onApprove, onReject }: RequestDetailDrawerProps) {
-  const store = useStore();
+  const store = useDataStore();
+  const { can } = useAuthStore();
   const requester = store.getUserById(request.requesterId);
   const project = store.getProjectById(request.projectId);
   const costCode = store.getCostCodeById(request.costCodeId);
@@ -25,7 +26,7 @@ export function RequestDetailDrawer({ request, onClose, onApprove, onReject }: R
 
   // Budget impact
   const impact = store.getBudgetImpact(request.projectId, request.estimatedTotal);
-  const canApprove = store.canCurrentUserApprove(request.estimatedTotal);
+  const canApprove = can('project.approve_request', request.projectId);
   const vendorCount = store.getVendorPOCount(request.vendor);
 
   const handleApprove = () => {
@@ -133,7 +134,7 @@ export function RequestDetailDrawer({ request, onClose, onApprove, onReject }: R
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
               </svg>
               <span className="text-[11px] text-text-muted font-medium">
-                Exceeds your ${store.currentUser.approvalLimit?.toLocaleString()} approval limit. Requires {request.estimatedTotal > 25000 ? 'executive' : 'admin'} approval.
+                You do not have approval permission for this project.
               </span>
             </div>
           )}
@@ -304,7 +305,7 @@ export function RequestDetailDrawer({ request, onClose, onApprove, onReject }: R
                   ? 'text-white bg-primary hover:bg-primary-hover'
                   : 'text-text-muted bg-surface cursor-not-allowed'
               }`}
-              title={!canApprove ? `Exceeds your $${store.currentUser.approvalLimit?.toLocaleString()} limit` : undefined}
+              title={!canApprove ? 'Missing approval permission' : undefined}
             >
               {canApprove ? 'Approve' : 'Exceeds Limit'}
             </button>

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useStore } from '@/data/store';
-import { PurchaseRequest, RequestStatus } from '@/data/types';
+import { useDataStore, PurchaseRequest, RequestStatus } from '@/lib/data-store';
+import { useAuthStore } from '@/lib/auth-store';
 import { StatusChip, UrgencyChip } from '@/components/StatusChip';
 import { RequestDetailDrawer } from '@/components/RequestDetailDrawer';
 import { RejectModal } from '@/components/RejectModal';
@@ -19,7 +19,7 @@ const TABS: { key: TabFilter; label: string }[] = [
 ];
 
 export default function QueuePage() {
-  const store = useStore();
+  const store = useDataStore();
   const [tab, setTab] = useState<TabFilter>('pending');
   const [search, setSearch] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<PurchaseRequest | null>(null);
@@ -62,15 +62,23 @@ export default function QueuePage() {
     return counts;
   }, [store.requests]);
 
-  const handleApprove = (r: PurchaseRequest) => {
-    store.approveRequest(r.id);
-    showToast(`${r.poNumber} approved`, r.id);
+  const handleApprove = async (r: PurchaseRequest) => {
+    try {
+      await store.approveRequest(r.id);
+      showToast(`${r.poNumber} approved`, r.id);
+    } catch (err) {
+      showToast((err as Error).message);
+    }
   };
 
-  const handleReject = (reason: string) => {
+  const handleReject = async (reason: string) => {
     if (!rejectTarget) return;
-    store.rejectRequest(rejectTarget.id, reason);
-    showToast(`${rejectTarget.poNumber} rejected`);
+    try {
+      await store.rejectRequest(rejectTarget.id, reason);
+      showToast(`${rejectTarget.poNumber} rejected`);
+    } catch (err) {
+      showToast((err as Error).message);
+    }
     setRejectTarget(null);
   };
 
@@ -273,11 +281,12 @@ function QueueRow({
   onApprove: () => void;
   onReject: () => void;
 }) {
-  const store = useStore();
+  const store = useDataStore();
+  const { can } = useAuthStore();
   const project = store.getProjectById(request.projectId);
   const costCode = store.getCostCodeById(request.costCodeId);
   const vendorCount = store.getVendorPOCount(request.vendor);
-  const canApprove = store.canCurrentUserApprove(request.estimatedTotal);
+  const canApprove = can('project.approve_request', request.projectId);
   const impact = showBudgetImpact
     ? store.getBudgetImpact(request.projectId, request.estimatedTotal)
     : null;
@@ -370,7 +379,7 @@ function QueueRow({
                   ? 'text-white bg-primary hover:bg-primary-hover'
                   : 'text-text-muted bg-surface cursor-not-allowed'
               }`}
-              title={!canApprove ? `Exceeds your $${store.currentUser.approvalLimit?.toLocaleString()} approval limit` : undefined}
+              title={!canApprove ? 'You do not have approval permission for this project' : undefined}
             >
               Approve
             </button>

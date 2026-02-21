@@ -2,15 +2,15 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { useStore } from '@/data/store';
+import { useDataStore } from '@/lib/data-store';
 import { formatCurrency, formatRelativeTime } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const requests = useStore((s) => s.requests);
-  const projects = useStore((s) => s.projects);
-  const users = useStore((s) => s.users);
-  const auditLog = useStore((s) => s.auditLog);
-  const getBudgetSnapshot = useStore((s) => s.getBudgetSnapshot);
+  const requests = useDataStore((s) => s.requests);
+  const projects = useDataStore((s) => s.projects);
+  const users = useDataStore((s) => s.users);
+  const auditLog = useDataStore((s) => s.auditLog);
+  const getBudgetSnapshot = useDataStore((s) => s.getBudgetSnapshot);
 
   const pending = useMemo(() => requests.filter((r) => r.status === 'pending'), [requests]);
   const approved = useMemo(() => requests.filter((r) => r.status === 'approved'), [requests]);
