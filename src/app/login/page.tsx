@@ -48,10 +48,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-semibold text-lg">E</span>
-          </div>
-          <h1 className="text-xl font-semibold text-text tracking-tight">Even B2B</h1>
+          <img src="/approcure-logo.png" alt="Approcure" className="w-12 h-12 rounded-lg mx-auto mb-4" />
+          <h1 className="text-xl font-semibold text-text tracking-tight">Approcure</h1>
           <p className="text-[12px] text-text-muted mt-1">Purchase Approvals for Construction</p>
         </div>
 

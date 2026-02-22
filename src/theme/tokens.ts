@@ -1,4 +1,4 @@
-// Even B2B – Shared design tokens (Web)
+// Approcure – Shared design tokens (Web)
 // These values match the CSS custom properties in globals.css.
 // Use Tailwind classes (e.g. bg-primary, text-text) when possible.
 // Import these only when you need values in JS (e.g. charts, dynamic styles).
@@ -9,9 +9,9 @@ export const colors = {
   border: '#E5E7EB',
   text: '#111827',
   textMuted: '#6B7280',
-  primary: '#1F3A5F',
-  primaryHover: '#274B7A',
-  primarySoft: '#E6EEF7',
+  primary: '#ff5a00',
+  primaryHover: '#e64f00',
+  primarySoft: '#FFF1E8',
   success: '#1E7F4F',
   successSoft: '#E9F5EF',
   warning: '#C47A00',
@@ -46,6 +46,6 @@ export const fontSize = {
 } as const;
 
 export const fontFamily = {
-  sans: '"Inter", system-ui, -apple-system, sans-serif',
-  mono: '"SF Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace',
+  sans: '"IBM Plex Sans", system-ui, -apple-system, sans-serif',
+  mono: '"IBM Plex Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace',
 } as const;

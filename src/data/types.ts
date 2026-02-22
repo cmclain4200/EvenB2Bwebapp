@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────
-// Even B2B – Shared Types
+// Approcure – Shared Types
 // ──────────────────────────────────────────────
 
 export type UserRole = 'worker' | 'manager' | 'admin';

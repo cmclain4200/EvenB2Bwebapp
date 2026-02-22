@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
@@ -56,9 +57,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="px-5 py-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-white font-bold text-sm">$</span>
-          </div>
+          <Image src="/approcure-logo.png" alt="Approcure" width={32} height={32} className="rounded-lg" />
           {organization && (
             <span className="text-[11px] font-semibold text-text truncate">{organization.name}</span>
           )}

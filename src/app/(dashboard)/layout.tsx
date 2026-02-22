@@ -31,7 +31,7 @@ export default function DashboardLayout({
   const { session, loading, onboarded, profile, organization, initialize } = useAuthStore();
   const initData = useDataStore((s) => s.initialize);
   const dataLoading = useDataStore((s) => s.loading);
-  const title = PAGE_TITLES[pathname] ?? 'Even B2B';
+  const title = PAGE_TITLES[pathname] ?? 'Approcure';
 
   useEffect(() => {
     initialize();

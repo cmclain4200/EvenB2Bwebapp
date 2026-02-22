@@ -1,7 +1,7 @@
 // ── RBAC Constants ──────────────────────────────────────────
 // Canonical roles, permissions, and role-to-permission mappings.
 // Used by both frontend (UI gating) and referenced by backend (enforcement).
-// Roles and permissions are system-defined — companies cannot edit them.
+// Roles and permissions are system-defined. Companies cannot edit them.
 // Companies CAN create display titles (aliases) mapped to canonical roles.
 
 // ── Org Roles ──
@@ -26,10 +26,10 @@ export const ORG_ROLE_LABELS: Record<OrgRole, string> = {
 
 export const ORG_ROLE_DESCRIPTIONS: Record<OrgRole, string> = {
   owner: 'Full access to all organization settings, billing, and data',
-  org_admin: 'Manages users, access codes, settings — everything except billing',
+  org_admin: 'Manages users, access codes, and settings (everything except billing)',
   accounting_admin: 'Audit trail, exports, integrations, and access codes',
   read_only_auditor: 'View-only access to audit trail and exports',
-  member: 'Basic membership — no org-level permissions',
+  member: 'Basic membership with no org-level permissions',
 };
 
 // Ordered from most to least privileged (used for escalation checks)
@@ -66,7 +66,7 @@ export const PROJECT_ROLE_LABELS: Record<ProjectRole, string> = {
 };
 
 export const PROJECT_ROLE_DESCRIPTIONS: Record<ProjectRole, string> = {
-  project_admin: 'Full project control — settings, members, all proposals',
+  project_admin: 'Full project control including settings, members, and all proposals',
   project_manager: 'Manages settings, approves, finalizes, exports',
   project_engineer: 'Creates proposals, views budget and all proposals',
   superintendent: 'Approves proposals, views budget',

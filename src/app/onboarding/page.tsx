@@ -52,9 +52,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-semibold text-lg">E</span>
-          </div>
+          <img src="/approcure-logo.png" alt="Approcure" className="w-12 h-12 rounded-lg mx-auto mb-4" />
           <h1 className="text-xl font-semibold text-text tracking-tight">Join Your Team</h1>
           <p className="text-[12px] text-text-muted mt-1">
             Enter the access code your admin gave you
